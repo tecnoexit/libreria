@@ -11,7 +11,7 @@ php artisan migrate --force
 if [ "$(php artisan tinker --execute='echo App\Models\Product::count();')" = "0" ]; then
     php artisan products:import
 fi
-php artisan storage:link --relative || true
+php artisan storage:link || true
 php artisan optimize
 
 exec /usr/bin/supervisord -c /etc/supervisord.conf
