@@ -14,6 +14,7 @@ RUN apk add --no-cache nginx supervisor sqlite-dev icu-dev libzip-dev oniguruma-
 WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
+COPY database/migrations ./database/migrations
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
