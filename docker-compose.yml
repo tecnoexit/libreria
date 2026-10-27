@@ -11,7 +11,14 @@ services:
     volumes:
       - libreria_database:/var/www/html/database
       - libreria_uploads:/var/www/html/storage/app/public
+    networks:
+      - default
+      - easypanel
 
 volumes:
   libreria_database:
   libreria_uploads:
+
+networks:
+  easypanel:
+    external: true
