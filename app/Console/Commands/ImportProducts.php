@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class ImportProducts extends Command
@@ -27,7 +28,7 @@ class ImportProducts extends Command
         $sheet = simplexml_load_string($zip->getFromName('xl/worksheets/sheet2.xml'));
         $sheet->registerXPathNamespace('x', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
         $factor = (float)(Setting::where('key', 'monedas')->value('value') ?: 1);
-        $count = 0; $category = null;
+        $rows = []; $category = null;
         foreach ($sheet->xpath('//x:sheetData/x:row') as $row) {
             $values = [];
             foreach ($row->c as $cell) {
@@ -39,9 +40,14 @@ class ImportProducts extends Command
             if (empty($values['B']) || empty($values['D']) || !isset($values['E']) || !is_numeric($values['E'])) continue;
             $name = $values['B']; $sku = $values['D']; $cost = (float)$values['E'];
             if (mb_strlen($name) < 2 || mb_strlen($sku) < 2 || $cost <= 0) continue;
-            Product::updateOrCreate(['sku' => $sku], ['name' => $name, 'category' => $category, 'cost' => $cost, 'price' => $cost * $factor, 'active' => true]);
-            $count++;
+            $rows[$sku] = ['sku' => $sku, 'name' => $name, 'category' => $category, 'cost' => $cost, 'price' => $cost * $factor, 'active' => true, 'created_at' => now(), 'updated_at' => now()];
         }
-        $zip->close(); $this->info("Productos importados: $count"); return self::SUCCESS;
+        $zip->close();
+        DB::transaction(function () use ($rows) {
+            foreach (array_chunk(array_values($rows), 500) as $batch) {
+                Product::upsert($batch, ['sku'], ['name', 'category', 'cost', 'price', 'active', 'updated_at']);
+            }
+        });
+        $this->info('Productos importados: '.count($rows)); return self::SUCCESS;
     }
 }
